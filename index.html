@@ -23,6 +23,60 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        // Audio Context Setup
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playLaunchSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function playProbeSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playExplosionSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
         const G = 0.5;
         const bodies = [];
         const particles = [];
@@ -45,7 +99,6 @@
                 this.x += this.vx;
                 this.y += this.vy;
 
-                // Create trail particles for AI ships
                 if (this.isAI && (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1)) {
                     particles.push(new Particle(
                         this.x - (this.vx * 2), 
@@ -94,10 +147,11 @@
             }
         }
 
-        // Spawn central Star
+        // Central Star
         bodies.push(new Body(canvas.width / 2, canvas.height / 2, 0, 0, 2000, 25, '#ffcc00'));
 
         function createExplosion(x, y, color) {
+            playExplosionSound();
             for (let i = 0; i < 25; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 4 + 1;
@@ -121,7 +175,6 @@
                     const dist = Math.sqrt(distSq);
 
                     if (dist < b1.radius + b2.radius) {
-                        // Merge on collision
                         createExplosion((b1.x + b2.x) / 2, (b1.y + b2.y) / 2, b1.mass > b2.mass ? b1.color : b2.color);
                         const totalMass = b1.mass + b2.mass;
                         b1.vx = (b1.vx * b1.mass + b2.vx * b2.mass) / totalMass;
@@ -146,6 +199,7 @@
         }
 
         window.addEventListener('mousedown', (e) => {
+            initAudio();
             if (e.button === 0) dragStart = { x: e.clientX, y: e.clientY };
         });
 
@@ -158,13 +212,16 @@
                 const vx = (dragStart.x - e.clientX) * 0.05;
                 const vy = (dragStart.y - e.clientY) * 0.05;
                 bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, 10, 6, '#4da6ff'));
+                playLaunchSound();
                 dragStart = null;
             }
         });
 
         window.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+            initAudio();
             bodies.push(new Body(e.clientX, e.clientY, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 5, 5, '#00ffff', true));
+            playProbeSound();
         });
 
         function gameLoop() {
