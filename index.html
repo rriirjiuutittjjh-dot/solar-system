@@ -3,23 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Solar System Sandbox</title>
+    <title>2D Universe Sandbox Lite</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #05050d; color: #fff; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background: #05050d; color: #fff; font-family: sans-serif; user-select: none; }
         canvas { display: block; }
         #ui { position: absolute; top: 15px; left: 15px; pointer-events: none; text-shadow: 0 0 5px #000; }
+        
+        #toolbar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(20, 20, 35, 0.7);
+            backdrop-filter: blur(8px);
+            padding: 10px 15px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.85rem;
+        }
+
+        button:hover { background: rgba(255, 255, 255, 0.3); }
+
         #facts-panel {
             position: absolute;
             top: 15px;
             right: 15px;
-            width: 220px;
+            width: 200px;
             padding: 15px;
             background: rgba(20, 20, 35, 0.6);
             backdrop-filter: blur(8px);
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.15);
             font-size: 0.85rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
         #facts-panel h3 { margin: 0 0 10px 0; color: #ffcc00; font-size: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 5px; }
         .fact-row { display: flex; justify-content: space-between; margin-bottom: 6px; color: #ccc; }
@@ -28,17 +55,21 @@
 </head>
 <body>
     <div id="ui">
-        <h2>2D Space Sandbox</h2>
-        <p>Click & Drag to launch planets | Right Click to spawn AI probe</p>
+        <h2>2D Universe Sandbox Lite</h2>
+        <p>Click & Drag to launch | Right Click for AI probe</p>
     </div>
 
     <div id="facts-panel">
-        <h3>Quick Facts</h3>
-        <div class="fact-row"><span>Age:</span> <span>~4.568B years</span></div>
-        <div class="fact-row"><span>Star:</span> <span>1 Sun (G2V)</span></div>
-        <div class="fact-row"><span>Terrestrial:</span> <span>4 Planets</span></div>
-        <div class="fact-row"><span>Gas Giants:</span> <span>4 Planets</span></div>
+        <h3>System Stats</h3>
         <div class="fact-row"><span>Active Bodies:</span> <span id="body-count">1</span></div>
+        <div class="fact-row"><span>Selected Preset:</span> <span id="selected-preset">Custom</span></div>
+    </div>
+
+    <div id="toolbar">
+        <button onclick="setSpawnType('earth')">Earth</button>
+        <button onclick="setSpawnType('mars')">Mars</button>
+        <button onclick="setSpawnType('jupiter')">Jupiter</button>
+        <button onclick="resetSystem()" style="color: #ff6666;">Reset</button>
     </div>
 
     <canvas id="canvas"></canvas>
@@ -47,6 +78,7 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const bodyCountEl = document.getElementById('body-count');
+        const presetEl = document.getElementById('selected-preset');
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -74,21 +106,6 @@
             osc.stop(audioCtx.currentTime + 0.15);
         }
 
-        function playProbeSound() {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
-        }
-
         function playExplosionSound() {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
@@ -105,10 +122,18 @@
         }
 
         const G = 0.5;
-        const bodies = [];
-        const particles = [];
+        let bodies = [];
+        let particles = [];
         let dragStart = null;
         let mousePos = { x: 0, y: 0 };
+        let currentSpawnType = 'custom';
+
+        const PRESETS = {
+            custom: { mass: 10, radius: 6, color: '#4da6ff' },
+            earth: { mass: 12, radius: 7, color: '#4da6ff' },
+            mars: { mass: 6, radius: 5, color: '#ff6644' },
+            jupiter: { mass: 80, radius: 14, color: '#ffcc88' }
+        };
 
         class Body {
             constructor(x, y, vx, vy, mass, radius, color, isAI = false) {
@@ -120,11 +145,16 @@
                 this.radius = radius;
                 this.color = color;
                 this.isAI = isAI;
+                this.history = [];
             }
 
             update() {
                 this.x += this.vx;
                 this.y += this.vy;
+
+                // Save orbit history line positions
+                this.history.push({ x: this.x, y: this.y });
+                if (this.history.length > 40) this.history.shift();
 
                 if (this.isAI && (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1)) {
                     particles.push(new Particle(
@@ -138,6 +168,19 @@
             }
 
             draw() {
+                // Draw Orbit Trail Line
+                if (this.history.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.history[0].x, this.history[0].y);
+                    for (let p of this.history) {
+                        ctx.lineTo(p.x, p.y);
+                    }
+                    ctx.strokeStyle = this.color + '44';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                }
+
+                // Draw Planet Body
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fillStyle = this.color;
@@ -174,8 +217,19 @@
             }
         }
 
-        // Spawn central Star (Sun)
-        bodies.push(new Body(canvas.width / 2, canvas.height / 2, 0, 0, 2000, 25, '#ffcc00'));
+        function initSun() {
+            bodies = [new Body(canvas.width / 2, canvas.height / 2, 0, 0, 2000, 25, '#ffcc00')];
+        }
+
+        function setSpawnType(type) {
+            currentSpawnType = type;
+            presetEl.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        }
+
+        function resetSystem() {
+            initSun();
+            particles = [];
+        }
 
         function createExplosion(x, y, color) {
             playExplosionSound();
@@ -226,6 +280,7 @@
         }
 
         window.addEventListener('mousedown', (e) => {
+            if (e.target.tagName === 'BUTTON') return;
             initAudio();
             if (e.button === 0) dragStart = { x: e.clientX, y: e.clientY };
         });
@@ -238,7 +293,8 @@
             if (e.button === 0 && dragStart) {
                 const vx = (dragStart.x - e.clientX) * 0.05;
                 const vy = (dragStart.y - e.clientY) * 0.05;
-                bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, 10, 6, '#4da6ff'));
+                const p = PRESETS[currentSpawnType];
+                bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, p.mass, p.radius, p.color));
                 playLaunchSound();
                 dragStart = null;
             }
@@ -248,11 +304,11 @@
             e.preventDefault();
             initAudio();
             bodies.push(new Body(e.clientX, e.clientY, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 5, 5, '#00ffff', true));
-            playProbeSound();
         });
 
         function gameLoop() {
-            ctx.fillStyle = 'rgba(5, 5, 13, 0.3)';
+            // Completely clear canvas every frame to prevent trailing dots
+            ctx.fillStyle = '#05050d';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             applyGravity();
@@ -270,6 +326,7 @@
                 ctx.moveTo(dragStart.x, dragStart.y);
                 ctx.lineTo(mousePos.x, mousePos.y);
                 ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
                 ctx.stroke();
             }
 
@@ -277,6 +334,7 @@
             requestAnimationFrame(gameLoop);
         }
 
+        initSun();
         gameLoop();
     </script>
 </body>
