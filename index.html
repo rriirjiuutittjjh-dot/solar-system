@@ -23,13 +23,15 @@
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 10px;
+            gap: 8px;
             background: rgba(22, 12, 48, 0.85);
             backdrop-filter: blur(8px);
             padding: 8px 16px;
             border-radius: 30px;
             border: 1px solid rgba(123, 66, 255, 0.3);
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         button {
@@ -48,6 +50,12 @@
         button:hover { 
             background: rgba(123, 66, 255, 0.3); 
             border-color: #a77bff;
+            color: #ffffff;
+        }
+
+        button.active {
+            background: rgba(123, 66, 255, 0.5);
+            border-color: #00e5ff;
             color: #ffffff;
         }
 
@@ -78,6 +86,7 @@
         <h3>SYSTEM DATA</h3>
         <div class="stat-row"><span>BODIES:</span> <span id="body-count">1</span></div>
         <div class="stat-row"><span>PRESET:</span> <span id="selected-preset">Custom</span></div>
+        <div class="stat-row"><span>TRAILS:</span> <span id="trail-status">ON</span></div>
     </div>
 
     <div id="toolbar">
@@ -89,6 +98,7 @@
         <button onclick="setSpawnType('saturn')">SATURN</button>
         <button onclick="setSpawnType('uranus')">URANUS</button>
         <button onclick="setSpawnType('neptune')">NEPTUNE</button>
+        <button id="trail-btn" onclick="toggleTrails()" class="active">TRAILS: ON</button>
         <button onclick="resetSystem()" style="border-color: #ff5577; color: #ff5577;">RESET</button>
     </div>
 
@@ -99,6 +109,8 @@
         const ctx = canvas.getContext('2d');
         const bodyCountEl = document.getElementById('body-count');
         const presetEl = document.getElementById('selected-preset');
+        const trailStatusEl = document.getElementById('trail-status');
+        const trailBtn = document.getElementById('trail-btn');
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -147,6 +159,7 @@
         let dragStart = null;
         let mousePos = { x: 0, y: 0 };
         let currentSpawnType = 'custom';
+        let showTrails = true;
 
         const PRESETS = {
             custom: { name: 'CUSTOM', mass: 10, radius: 6, color: '#4da6ff' },
@@ -156,9 +169,16 @@
             mars: { name: 'MARS', mass: 6, radius: 5, color: '#ff6644', moons: 2 },
             jupiter: { name: 'JUPITER', mass: 80, radius: 14, color: '#ffcc88', moons: 4, rings: true },
             saturn: { name: 'SATURN', mass: 50, radius: 12, color: '#ffe699', moons: 3, rings: true },
-            uranus: { name: 'URANUS', mass: 30, radius: 10, color: '#77eeee', moons: 2, rings: true },
+            uranus: { name: 'URANUS', mass: 10, radius: 10, color: '#77eeee', moons: 2, rings: true },
             neptune: { name: 'NEPTUNE', mass: 32, radius: 10, color: '#5577ff', moons: 1 }
         };
+
+        function toggleTrails() {
+            showTrails = !showTrails;
+            trailStatusEl.textContent = showTrails ? 'ON' : 'OFF';
+            trailBtn.textContent = `TRAILS: ${showTrails ? 'ON' : 'OFF'}`;
+            trailBtn.classList.toggle('active', showTrails);
+        }
 
         class Body {
             constructor(x, y, vx, vy, mass, radius, color, name = '', isAI = false, isStar = false, moons = 0, rings = false) {
@@ -183,8 +203,12 @@
                 this.y += this.vy;
                 this.moonAngle += 0.03;
 
-                this.history.push({ x: this.x, y: this.y });
-                if (this.history.length > 60) this.history.shift();
+                if (showTrails) {
+                    this.history.push({ x: this.x, y: this.y });
+                    if (this.history.length > 60) this.history.shift();
+                } else {
+                    this.history = [];
+                }
 
                 if (this.isAI && (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1)) {
                     particles.push(new Particle(
@@ -198,8 +222,8 @@
             }
 
             draw() {
-                // Elliptical Orbit Track Lines
-                if (this.history.length > 1 && !this.isStar) {
+                // Render Trails only if enabled
+                if (showTrails && this.history.length > 1 && !this.isStar) {
                     ctx.beginPath();
                     ctx.moveTo(this.history[0].x, this.history[0].y);
                     for (let p of this.history) {
@@ -210,12 +234,10 @@
                     ctx.stroke();
                 }
 
-                // Render Sun with Stylized Rays
+                // Render Sun with Rays
                 if (this.isStar) {
                     ctx.save();
                     ctx.translate(this.x, this.y);
-                    
-                    // Draw Sun Rays
                     ctx.strokeStyle = '#ffaa00';
                     ctx.lineWidth = 3;
                     const rays = 12;
@@ -227,7 +249,6 @@
                         ctx.stroke();
                     }
 
-                    // Sun Core
                     ctx.beginPath();
                     ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
                     ctx.fillStyle = '#ffdd44';
@@ -267,7 +288,7 @@
                         ctx.fill();
                     }
 
-                    // Planet Label
+                    // Label
                     if (this.name) {
                         ctx.font = '10px "Courier New", monospace';
                         ctx.fillStyle = '#d0c8f0';
