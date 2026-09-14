@@ -3,89 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Space Sandbox - Modern Skin</title>
+    <title>Solar System Sandbox</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #030308; color: #e0e6ff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #0f0728; color: #d0c8f0; font-family: 'Courier New', Courier, monospace; user-select: none; }
         canvas { display: block; }
         
         #ui-header {
             position: absolute;
-            top: 20px;
+            top: 15px;
             left: 20px;
             pointer-events: none;
         }
-        #ui-header h2 { margin: 0; font-size: 1.4rem; letter-spacing: 1px; color: #ffffff; text-shadow: 0 0 10px rgba(0,229,255,0.5); }
-        #ui-header p { margin: 4px 0 0 0; font-size: 0.8rem; color: #8a99ad; }
+        #ui-header h2 { margin: 0; font-size: 1.3rem; letter-spacing: 2px; color: #ffffff; text-shadow: 0 0 10px #7b42ff; }
+        #ui-header p { margin: 4px 0 0 0; font-size: 0.75rem; color: #8e80bf; }
 
         #toolbar {
             position: absolute;
-            bottom: 25px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 12px;
-            background: rgba(10, 12, 24, 0.75);
-            backdrop-filter: blur(12px);
-            padding: 10px 20px;
-            border-radius: 40px;
-            border: 1px solid rgba(0, 229, 255, 0.2);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 229, 255, 0.05);
+            gap: 10px;
+            background: rgba(22, 12, 48, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 8px 16px;
+            border-radius: 30px;
+            border: 1px solid rgba(123, 66, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
         }
 
         button {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #d0d8ff;
-            padding: 8px 16px;
-            border-radius: 20px;
+            color: #d0c8f0;
+            padding: 6px 12px;
+            border-radius: 15px;
             cursor: pointer;
-            transition: all 0.25s ease;
-            font-size: 0.85rem;
-            font-weight: 500;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
         }
 
         button:hover { 
-            background: rgba(0, 229, 255, 0.2); 
-            border-color: #00e5ff;
+            background: rgba(123, 66, 255, 0.3); 
+            border-color: #a77bff;
             color: #ffffff;
-            box-shadow: 0 0 10px rgba(0,229,255,0.4);
         }
 
         #stats-card {
             position: absolute;
-            top: 20px;
+            top: 15px;
             right: 20px;
-            width: 190px;
-            padding: 16px;
-            background: rgba(10, 12, 24, 0.75);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            border: 1px solid rgba(0, 229, 255, 0.2);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-            font-size: 0.85rem;
+            width: 170px;
+            padding: 12px;
+            background: rgba(22, 12, 48, 0.85);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            border: 1px solid rgba(123, 66, 255, 0.3);
+            font-size: 0.75rem;
         }
-        #stats-card h3 { margin: 0 0 12px 0; color: #00e5ff; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 6px; }
-        .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; color: #8a99ad; }
-        .stat-row span:last-child { color: #ffffff; font-weight: 600; }
+        #stats-card h3 { margin: 0 0 8px 0; color: #ffcc00; font-size: 0.85rem; letter-spacing: 1px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 4px; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 6px; color: #8e80bf; }
+        .stat-row span:last-child { color: #ffffff; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="ui-header">
-        <h2>SOLAR SANDBOX</h2>
+        <h2>SOLAR SYSTEM</h2>
         <p>Drag to launch • Right-click for AI probe</p>
     </div>
 
     <div id="stats-card">
-        <h3>Telemetry</h3>
-        <div class="stat-row"><span>Bodies:</span> <span id="body-count">1</span></div>
-        <div class="stat-row"><span>Preset:</span> <span id="selected-preset">Custom</span></div>
+        <h3>SYSTEM DATA</h3>
+        <div class="stat-row"><span>BODIES:</span> <span id="body-count">1</span></div>
+        <div class="stat-row"><span>PRESET:</span> <span id="selected-preset">Custom</span></div>
     </div>
 
     <div id="toolbar">
-        <button onclick="setSpawnType('earth')">Earth</button>
-        <button onclick="setSpawnType('mars')">Mars</button>
-        <button onclick="setSpawnType('jupiter')">Jupiter</button>
-        <button onclick="resetSystem()" style="border-color: rgba(255, 85, 85, 0.4); color: #ff6666;">Reset</button>
+        <button onclick="setSpawnType('mercury')">MERCURY</button>
+        <button onclick="setSpawnType('venus')">VENUS</button>
+        <button onclick="setSpawnType('earth')">EARTH</button>
+        <button onclick="setSpawnType('mars')">MARS</button>
+        <button onclick="setSpawnType('jupiter')">JUPITER</button>
+        <button onclick="setSpawnType('saturn')">SATURN</button>
+        <button onclick="setSpawnType('uranus')">URANUS</button>
+        <button onclick="setSpawnType('neptune')">NEPTUNE</button>
+        <button onclick="resetSystem()" style="border-color: #ff5577; color: #ff5577;">RESET</button>
     </div>
 
     <canvas id="canvas"></canvas>
@@ -145,14 +149,19 @@
         let currentSpawnType = 'custom';
 
         const PRESETS = {
-            custom: { mass: 10, radius: 6, color: '#00e5ff' },
-            earth: { mass: 12, radius: 7, color: '#00aaff' },
-            mars: { mass: 6, radius: 5, color: '#ff4433' },
-            jupiter: { mass: 80, radius: 14, color: '#ffaa44' }
+            custom: { name: 'CUSTOM', mass: 10, radius: 6, color: '#4da6ff' },
+            mercury: { name: 'MERCURY', mass: 4, radius: 4, color: '#e5c199' },
+            venus: { name: 'VENUS', mass: 9, radius: 7, color: '#ffdd99' },
+            earth: { name: 'EARTH', mass: 10, radius: 7, color: '#55aaff', moons: 1 },
+            mars: { name: 'MARS', mass: 6, radius: 5, color: '#ff6644', moons: 2 },
+            jupiter: { name: 'JUPITER', mass: 80, radius: 14, color: '#ffcc88', moons: 4, rings: true },
+            saturn: { name: 'SATURN', mass: 50, radius: 12, color: '#ffe699', moons: 3, rings: true },
+            uranus: { name: 'URANUS', mass: 30, radius: 10, color: '#77eeee', moons: 2, rings: true },
+            neptune: { name: 'NEPTUNE', mass: 32, radius: 10, color: '#5577ff', moons: 1 }
         };
 
         class Body {
-            constructor(x, y, vx, vy, mass, radius, color, isAI = false, isStar = false) {
+            constructor(x, y, vx, vy, mass, radius, color, name = '', isAI = false, isStar = false, moons = 0, rings = false) {
                 this.x = x;
                 this.y = y;
                 this.vx = vx;
@@ -160,17 +169,22 @@
                 this.mass = mass;
                 this.radius = radius;
                 this.color = color;
+                this.name = name;
                 this.isAI = isAI;
                 this.isStar = isStar;
+                this.moons = moons;
+                this.rings = rings;
                 this.history = [];
+                this.moonAngle = Math.random() * Math.PI * 2;
             }
 
             update() {
                 this.x += this.vx;
                 this.y += this.vy;
+                this.moonAngle += 0.03;
 
                 this.history.push({ x: this.x, y: this.y });
-                if (this.history.length > 50) this.history.shift();
+                if (this.history.length > 60) this.history.shift();
 
                 if (this.isAI && (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1)) {
                     particles.push(new Particle(
@@ -184,40 +198,83 @@
             }
 
             draw() {
-                // Orbit path rendering
+                // Elliptical Orbit Track Lines
                 if (this.history.length > 1 && !this.isStar) {
-                    for (let i = 0; i < this.history.length - 1; i++) {
-                        const alpha = (i / this.history.length) * 0.4;
-                        ctx.beginPath();
-                        ctx.moveTo(this.history[i].x, this.history[i].y);
-                        ctx.lineTo(this.history[i + 1].x, this.history[i + 1].y);
-                        ctx.strokeStyle = this.color;
-                        ctx.globalAlpha = alpha;
-                        ctx.lineWidth = 1.5;
-                        ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(this.history[0].x, this.history[0].y);
+                    for (let p of this.history) {
+                        ctx.lineTo(p.x, p.y);
                     }
-                    ctx.globalAlpha = 1.0;
+                    ctx.strokeStyle = 'rgba(123, 66, 255, 0.25)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
                 }
 
-                // Celestial Body Glow
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                
+                // Render Sun with Stylized Rays
                 if (this.isStar) {
-                    ctx.shadowBlur = 30;
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    
+                    // Draw Sun Rays
+                    ctx.strokeStyle = '#ffaa00';
+                    ctx.lineWidth = 3;
+                    const rays = 12;
+                    for (let i = 0; i < rays; i++) {
+                        const angle = (i * Math.PI * 2) / rays;
+                        ctx.beginPath();
+                        ctx.moveTo(Math.cos(angle) * (this.radius + 4), Math.sin(angle) * (this.radius + 4));
+                        ctx.lineTo(Math.cos(angle) * (this.radius + 18), Math.sin(angle) * (this.radius + 18));
+                        ctx.stroke();
+                    }
+
+                    // Sun Core
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffdd44';
+                    ctx.shadowBlur = 20;
                     ctx.shadowColor = '#ffaa00';
-                } else if (this.isAI) {
-                    ctx.shadowBlur = 12;
-                    ctx.shadowColor = '#00ffff';
+                    ctx.fill();
+                    ctx.restore();
                 } else {
-                    ctx.shadowBlur = 8;
+                    // Draw Rings
+                    if (this.rings) {
+                        ctx.beginPath();
+                        ctx.ellipse(this.x, this.y, this.radius * 2.2, this.radius * 0.7, Math.PI / 6, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(255, 230, 150, 0.5)';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+
+                    // Draw Planet Body
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.shadowBlur = this.isAI ? 10 : 4;
                     ctx.shadowColor = this.color;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    // Draw Moons
+                    for (let i = 0; i < this.moons; i++) {
+                        const mDist = this.radius + 10 + (i * 6);
+                        const mAngle = this.moonAngle + (i * (Math.PI * 2 / this.moons));
+                        const mx = this.x + Math.cos(mAngle) * mDist;
+                        const my = this.y + Math.sin(mAngle) * (mDist * 0.4);
+                        
+                        ctx.beginPath();
+                        ctx.arc(mx, my, 1.8, 0, Math.PI * 2);
+                        ctx.fillStyle = '#d0c8f0';
+                        ctx.fill();
+                    }
+
+                    // Planet Label
+                    if (this.name) {
+                        ctx.font = '10px "Courier New", monospace';
+                        ctx.fillStyle = '#d0c8f0';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(this.name, this.x, this.y + this.radius + 14);
+                    }
                 }
-                
-                ctx.fill();
-                ctx.restore();
             }
         }
 
@@ -248,12 +305,12 @@
         }
 
         function initSun() {
-            bodies = [new Body(canvas.width / 2, canvas.height / 2, 0, 0, 2000, 22, '#ffcc00', false, true)];
+            bodies = [new Body(canvas.width / 2, canvas.height / 2, 0, 0, 2000, 24, '#ffdd44', 'SUN', false, true)];
         }
 
         function setSpawnType(type) {
             currentSpawnType = type;
-            presetEl.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+            presetEl.textContent = PRESETS[type].name;
         }
 
         function resetSystem() {
@@ -324,7 +381,7 @@
                 const vx = (dragStart.x - e.clientX) * 0.04;
                 const vy = (dragStart.y - e.clientY) * 0.04;
                 const p = PRESETS[currentSpawnType];
-                bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, p.mass, p.radius, p.color));
+                bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, p.mass, p.radius, p.color, p.name, false, false, p.moons || 0, p.rings || false));
                 playLaunchSound();
                 dragStart = null;
             }
@@ -333,11 +390,11 @@
         window.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             initAudio();
-            bodies.push(new Body(e.clientX, e.clientY, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 5, 4, '#00ffff', true));
+            bodies.push(new Body(e.clientX, e.clientY, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 5, 4, '#00ffff', 'PROBE', true));
         });
 
         function gameLoop() {
-            ctx.fillStyle = '#030308';
+            ctx.fillStyle = '#0f0728';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             applyGravity();
@@ -354,9 +411,9 @@
                 ctx.beginPath();
                 ctx.moveTo(dragStart.x, dragStart.y);
                 ctx.lineTo(mousePos.x, mousePos.y);
-                ctx.strokeStyle = 'rgba(0, 229, 255, 0.6)';
-                ctx.setLineDash([4, 4]);
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.setLineDash([3, 3]);
+                ctx.lineWidth = 1;
                 ctx.stroke();
                 ctx.setLineDash([]);
             }
