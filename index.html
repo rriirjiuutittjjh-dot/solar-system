@@ -3,73 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Universe Sandbox Lite</title>
+    <title>2D Space Sandbox - Modern Skin</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #05050d; color: #fff; font-family: sans-serif; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #030308; color: #e0e6ff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
         canvas { display: block; }
-        #ui { position: absolute; top: 15px; left: 15px; pointer-events: none; text-shadow: 0 0 5px #000; }
         
+        #ui-header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+        }
+        #ui-header h2 { margin: 0; font-size: 1.4rem; letter-spacing: 1px; color: #ffffff; text-shadow: 0 0 10px rgba(0,229,255,0.5); }
+        #ui-header p { margin: 4px 0 0 0; font-size: 0.8rem; color: #8a99ad; }
+
         #toolbar {
             position: absolute;
-            bottom: 20px;
+            bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 10px;
-            background: rgba(20, 20, 35, 0.7);
-            backdrop-filter: blur(8px);
-            padding: 10px 15px;
-            border-radius: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            gap: 12px;
+            background: rgba(10, 12, 24, 0.75);
+            backdrop-filter: blur(12px);
+            padding: 10px 20px;
+            border-radius: 40px;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 229, 255, 0.05);
         }
 
         button {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #d0d8ff;
+            padding: 8px 16px;
             border-radius: 20px;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.25s ease;
             font-size: 0.85rem;
+            font-weight: 500;
         }
 
-        button:hover { background: rgba(255, 255, 255, 0.3); }
+        button:hover { 
+            background: rgba(0, 229, 255, 0.2); 
+            border-color: #00e5ff;
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(0,229,255,0.4);
+        }
 
-        #facts-panel {
+        #stats-card {
             position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 200px;
-            padding: 15px;
-            background: rgba(20, 20, 35, 0.6);
-            backdrop-filter: blur(8px);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            top: 20px;
+            right: 20px;
+            width: 190px;
+            padding: 16px;
+            background: rgba(10, 12, 24, 0.75);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
             font-size: 0.85rem;
         }
-        #facts-panel h3 { margin: 0 0 10px 0; color: #ffcc00; font-size: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 5px; }
-        .fact-row { display: flex; justify-content: space-between; margin-bottom: 6px; color: #ccc; }
-        .fact-row span:last-child { color: #fff; font-weight: bold; }
+        #stats-card h3 { margin: 0 0 12px 0; color: #00e5ff; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 6px; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; color: #8a99ad; }
+        .stat-row span:last-child { color: #ffffff; font-weight: 600; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <h2>2D Universe Sandbox Lite</h2>
-        <p>Click & Drag to launch | Right Click for AI probe</p>
+    <div id="ui-header">
+        <h2>SOLAR SANDBOX</h2>
+        <p>Drag to launch • Right-click for AI probe</p>
     </div>
 
-    <div id="facts-panel">
-        <h3>System Stats</h3>
-        <div class="fact-row"><span>Active Bodies:</span> <span id="body-count">1</span></div>
-        <div class="fact-row"><span>Selected Preset:</span> <span id="selected-preset">Custom</span></div>
+    <div id="stats-card">
+        <h3>Telemetry</h3>
+        <div class="stat-row"><span>Bodies:</span> <span id="body-count">1</span></div>
+        <div class="stat-row"><span>Preset:</span> <span id="selected-preset">Custom</span></div>
     </div>
 
     <div id="toolbar">
         <button onclick="setSpawnType('earth')">Earth</button>
         <button onclick="setSpawnType('mars')">Mars</button>
         <button onclick="setSpawnType('jupiter')">Jupiter</button>
-        <button onclick="resetSystem()" style="color: #ff6666;">Reset</button>
+        <button onclick="resetSystem()" style="border-color: rgba(255, 85, 85, 0.4); color: #ff6666;">Reset</button>
     </div>
 
     <canvas id="canvas"></canvas>
@@ -96,14 +112,14 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.15);
+            osc.stop(audioCtx.currentTime + 0.12);
         }
 
         function playExplosionSound() {
@@ -111,14 +127,14 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
-            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(25, audioCtx.currentTime + 0.25);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.3);
+            osc.stop(audioCtx.currentTime + 0.25);
         }
 
         const G = 0.5;
@@ -129,14 +145,14 @@
         let currentSpawnType = 'custom';
 
         const PRESETS = {
-            custom: { mass: 10, radius: 6, color: '#4da6ff' },
-            earth: { mass: 12, radius: 7, color: '#4da6ff' },
-            mars: { mass: 6, radius: 5, color: '#ff6644' },
-            jupiter: { mass: 80, radius: 14, color: '#ffcc88' }
+            custom: { mass: 10, radius: 6, color: '#00e5ff' },
+            earth: { mass: 12, radius: 7, color: '#00aaff' },
+            mars: { mass: 6, radius: 5, color: '#ff4433' },
+            jupiter: { mass: 80, radius: 14, color: '#ffaa44' }
         };
 
         class Body {
-            constructor(x, y, vx, vy, mass, radius, color, isAI = false) {
+            constructor(x, y, vx, vy, mass, radius, color, isAI = false, isStar = false) {
                 this.x = x;
                 this.y = y;
                 this.vx = vx;
@@ -145,6 +161,7 @@
                 this.radius = radius;
                 this.color = color;
                 this.isAI = isAI;
+                this.isStar = isStar;
                 this.history = [];
             }
 
@@ -152,42 +169,55 @@
                 this.x += this.vx;
                 this.y += this.vy;
 
-                // Save orbit history line positions
                 this.history.push({ x: this.x, y: this.y });
-                if (this.history.length > 40) this.history.shift();
+                if (this.history.length > 50) this.history.shift();
 
                 if (this.isAI && (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1)) {
                     particles.push(new Particle(
-                        this.x - (this.vx * 2), 
-                        this.y - (this.vy * 2), 
-                        -this.vx * 0.2 + (Math.random() - 0.5), 
-                        -this.vy * 0.2 + (Math.random() - 0.5), 
-                        2, '#00ffff', 20
+                        this.x - (this.vx * 1.5), 
+                        this.y - (this.vy * 1.5), 
+                        -this.vx * 0.2 + (Math.random() - 0.5) * 0.5, 
+                        -this.vy * 0.2 + (Math.random() - 0.5) * 0.5, 
+                        2, '#00ffff', 18
                     ));
                 }
             }
 
             draw() {
-                // Draw Orbit Trail Line
-                if (this.history.length > 1) {
-                    ctx.beginPath();
-                    ctx.moveTo(this.history[0].x, this.history[0].y);
-                    for (let p of this.history) {
-                        ctx.lineTo(p.x, p.y);
+                // Orbit path rendering
+                if (this.history.length > 1 && !this.isStar) {
+                    for (let i = 0; i < this.history.length - 1; i++) {
+                        const alpha = (i / this.history.length) * 0.4;
+                        ctx.beginPath();
+                        ctx.moveTo(this.history[i].x, this.history[i].y);
+                        ctx.lineTo(this.history[i + 1].x, this.history[i + 1].y);
+                        ctx.strokeStyle = this.color;
+                        ctx.globalAlpha = alpha;
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
                     }
-                    ctx.strokeStyle = this.color + '44';
-                    ctx.lineWidth = 1.5;
-                    ctx.stroke();
+                    ctx.globalAlpha = 1.0;
                 }
 
-                // Draw Planet Body
+                // Celestial Body Glow
+                ctx.save();
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fillStyle = this.color;
-                ctx.shadowBlur = this.isAI ? 10 : 0;
-                ctx.shadowColor = this.color;
+                
+                if (this.isStar) {
+                    ctx.shadowBlur = 30;
+                    ctx.shadowColor = '#ffaa00';
+                } else if (this.isAI) {
+                    ctx.shadowBlur = 12;
+                    ctx.shadowColor = '#00ffff';
+                } else {
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = this.color;
+                }
+                
                 ctx.fill();
-                ctx.shadowBlur = 0;
+                ctx.restore();
             }
         }
 
@@ -218,7 +248,7 @@
         }
 
         function initSun() {
-            bodies = [new Body(canvas.width / 2, canvas.height / 2, 0, 0, 2000, 25, '#ffcc00')];
+            bodies = [new Body(canvas.width / 2, canvas.height / 2, 0, 0, 2000, 22, '#ffcc00', false, true)];
         }
 
         function setSpawnType(type) {
@@ -233,14 +263,14 @@
 
         function createExplosion(x, y, color) {
             playExplosionSound();
-            for (let i = 0; i < 25; i++) {
+            for (let i = 0; i < 20; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 4 + 1;
+                const speed = Math.random() * 3.5 + 0.5;
                 particles.push(new Particle(
                     x, y, 
                     Math.cos(angle) * speed, 
                     Math.sin(angle) * speed, 
-                    Math.random() * 3 + 1, color, 40
+                    Math.random() * 2.5 + 1, color, 35
                 ));
             }
         }
@@ -261,7 +291,7 @@
                         b1.vx = (b1.vx * b1.mass + b2.vx * b2.mass) / totalMass;
                         b1.vy = (b1.vy * b1.mass + b2.vy * b2.mass) / totalMass;
                         b1.mass = totalMass;
-                        b1.radius = Math.min(50, Math.sqrt(b1.radius * b1.radius + b2.radius * b2.radius));
+                        b1.radius = Math.min(45, Math.sqrt(b1.radius * b1.radius + b2.radius * b2.radius));
                         bodies.splice(j, 1);
                         j--;
                         continue;
@@ -291,8 +321,8 @@
 
         window.addEventListener('mouseup', (e) => {
             if (e.button === 0 && dragStart) {
-                const vx = (dragStart.x - e.clientX) * 0.05;
-                const vy = (dragStart.y - e.clientY) * 0.05;
+                const vx = (dragStart.x - e.clientX) * 0.04;
+                const vy = (dragStart.y - e.clientY) * 0.04;
                 const p = PRESETS[currentSpawnType];
                 bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, p.mass, p.radius, p.color));
                 playLaunchSound();
@@ -303,12 +333,11 @@
         window.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             initAudio();
-            bodies.push(new Body(e.clientX, e.clientY, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 5, 5, '#00ffff', true));
+            bodies.push(new Body(e.clientX, e.clientY, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 5, 4, '#00ffff', true));
         });
 
         function gameLoop() {
-            // Completely clear canvas every frame to prevent trailing dots
-            ctx.fillStyle = '#05050d';
+            ctx.fillStyle = '#030308';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             applyGravity();
@@ -325,9 +354,11 @@
                 ctx.beginPath();
                 ctx.moveTo(dragStart.x, dragStart.y);
                 ctx.lineTo(mousePos.x, mousePos.y);
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(0, 229, 255, 0.6)';
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 1.5;
                 ctx.stroke();
+                ctx.setLineDash([]);
             }
 
             bodyCountEl.textContent = bodies.length;
