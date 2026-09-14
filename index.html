@@ -1,363 +1,198 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2D Solar System Sandbox AI Game</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #05050d;
-      color: #ffffff;
-      font-family: system-ui, -apple-system, sans-serif;
-      overflow: hidden;
-      user-select: none;
-    }
-    canvas {
-      display: block;
-    }
-    #ui {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      background: rgba(10, 10, 25, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 16px;
-      border-radius: 10px;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-      max-width: 280px;
-    }
-    h2 {
-      margin: 0 0 8px 0;
-      font-size: 18px;
-      color: #38bdf8;
-    }
-    p {
-      margin: 0 0 12px 0;
-      font-size: 12px;
-      color: #94a3b8;
-      line-height: 1.4;
-    }
-    .btn-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    button {
-      background: #2563eb;
-      border: none;
-      color: #ffffff;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-    }
-    button:hover {
-      background: #3b82f6;
-    }
-    button:active {
-      transform: scale(0.98);
-    }
-    button.secondary {
-      background: #334155;
-    }
-    button.secondary:hover {
-      background: #475569;
-    }
-    #stats {
-      margin-top: 12px;
-      font-size: 11px;
-      color: #64748b;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      padding-top: 8px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Space Sandbox</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #05050d; color: #fff; font-family: sans-serif; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; text-shadow: 0 0 5px #000; }
+    </style>
 </head>
 <body>
-
-  <div id="ui">
-    <h2>2D Solar System AI</h2>
-    <p>Click & Drag anywhere on the map to sling-launch a new planet!</p>
-    <div class="btn-group">
-      <button onclick="spawnAIShip()">Spawn AI Probe</button>
-      <button class="secondary" onclick="resetSystem()">Reset Solar System</button>
+    <div id="ui">
+        <h2>Solar System Sandbox</h2>
+        <p>Click & Drag to launch planets | Right Click to spawn AI probe</p>
     </div>
-    <div id="stats">
-      Bodies: <span id="body-count">0</span> | AI Ships: <span id="ai-count">0</span>
-    </div>
-  </div>
+    <canvas id="canvas"></canvas>
 
-  <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-  <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+        const G = 0.5;
+        const bodies = [];
+        const particles = [];
+        let dragStart = null;
+        let mousePos = { x: 0, y: 0 };
 
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    const G = 0.6; // Gravitational constant
-    let bodies = [];
-    let ships = [];
-    let dragStart = null;
-    let dragCurrent = null;
-
-    class CelestialBody {
-      constructor(x, y, vx, vy, mass, radius, color, isStar = false) {
-        this.x = x;
-        this.y = y;
-        this.vx = vx;
-        this.vy = vy;
-        this.mass = mass;
-        this.radius = radius;
-        this.color = color;
-        this.isStar = isStar;
-        this.trail = [];
-      }
-
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-
-        if (!this.isStar) {
-          this.trail.push({ x: this.x, y: this.y });
-          if (this.trail.length > 120) this.trail.shift();
-        }
-      }
-
-      draw() {
-        // Render Orbital Trail
-        if (this.trail.length > 1) {
-          ctx.beginPath();
-          ctx.moveTo(this.trail[0].x, this.trail[0].y);
-          for (let i = 1; i < this.trail.length; i++) {
-            ctx.lineTo(this.trail[i].x, this.trail[i].y);
-          }
-          ctx.strokeStyle = this.color + '44';
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-        }
-
-        // Render Body
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = this.isStar ? 25 : 8;
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    class AIShip {
-      constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = (Math.random() - 0.5) * 2;
-        this.maxSpeed = 4;
-        this.target = null;
-        this.color = '#38bdf8';
-      }
-
-      update() {
-        // Find target planet if none
-        const planets = bodies.filter(b => !b.isStar);
-        if (planets.length > 0 && (!this.target || !bodies.includes(this.target))) {
-          this.target = planets[Math.floor(Math.random() * planets.length)];
-        }
-
-        // Autonomous Steering toward target planet
-        if (this.target) {
-          let dx = this.target.x - this.x;
-          let dy = this.target.y - this.y;
-          let dist = Math.hypot(dx, dy);
-
-          if (dist > this.target.radius + 30) {
-            let desiredVx = (dx / dist) * this.maxSpeed;
-            let desiredVy = (dy / dist) * this.maxSpeed;
-
-            this.vx += (desiredVx - this.vx) * 0.04;
-            this.vy += (desiredVy - this.vy) * 0.04;
-          } else {
-            // Pick a new target upon reaching destination
-            this.target = planets[Math.floor(Math.random() * planets.length)];
-          }
-        }
-
-        this.x += this.vx;
-        this.y += this.vy;
-      }
-
-      draw() {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(Math.atan2(this.vy, this.vx));
-        
-        // Draw Triangle Ship
-        ctx.beginPath();
-        ctx.moveTo(8, 0);
-        ctx.lineTo(-6, -5);
-        ctx.lineTo(-4, 0);
-        ctx.lineTo(-6, 5);
-        ctx.closePath();
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    function computeGravity() {
-      for (let i = 0; i < bodies.length; i++) {
-        for (let j = i + 1; j < bodies.length; j++) {
-          let b1 = bodies[i];
-          let b2 = bodies[j];
-
-          let dx = b2.x - b1.x;
-          let dy = b2.y - b1.y;
-          let distSq = dx * dx + dy * dy;
-          let dist = Math.sqrt(distSq);
-
-          if (dist < b1.radius + b2.radius) continue;
-
-          let force = (G * b1.mass * b2.mass) / distSq;
-          let fx = force * (dx / dist);
-          let fy = force * (dy / dist);
-
-          b1.vx += fx / b1.mass;
-          b1.vy += fy / b1.mass;
-          b2.vx -= fx / b2.mass;
-          b2.vy -= fy / b2.mass;
-        }
-      }
-    }
-
-    function handleCollisions() {
-      for (let i = 0; i < bodies.length; i++) {
-        for (let j = i + 1; j < bodies.length; j++) {
-          let b1 = bodies[i];
-          let b2 = bodies[j];
-
-          let dx = b2.x - b1.x;
-          let dy = b2.y - b1.y;
-          let dist = Math.hypot(dx, dy);
-
-          if (dist < b1.radius + b2.radius) {
-            let primary = b1.mass >= b2.mass ? b1 : b2;
-            let secondary = b1.mass >= b2.mass ? b2 : b1;
-
-            let totalMass = primary.mass + secondary.mass;
-            primary.vx = (primary.vx * primary.mass + secondary.vx * secondary.mass) / totalMass;
-            primary.vy = (primary.vy * primary.mass + secondary.vy * secondary.mass) / totalMass;
-            primary.mass = totalMass;
-            
-            if (!primary.isStar) {
-              primary.radius = Math.sqrt(primary.radius * primary.radius + secondary.radius * secondary.radius);
+        class Body {
+            constructor(x, y, vx, vy, mass, radius, color, isAI = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.mass = mass;
+                this.radius = radius;
+                this.color = color;
+                this.isAI = isAI;
             }
 
-            bodies.splice(bodies.indexOf(secondary), 1);
-            return handleCollisions();
-          }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Create trail particles for AI ships
+                if (this.isAI && (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1)) {
+                    particles.push(new Particle(
+                        this.x - (this.vx * 2), 
+                        this.y - (this.vy * 2), 
+                        -this.vx * 0.2 + (Math.random() - 0.5), 
+                        -this.vy * 0.2 + (Math.random() - 0.5), 
+                        2, '#00ffff', 20
+                    ));
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = this.isAI ? 10 : 0;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
         }
-      }
-    }
 
-    function spawnAIShip() {
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      ships.push(new AIShip(cx + (Math.random() - 0.5) * 400, cy + (Math.random() - 0.5) * 400));
-    }
+        class Particle {
+            constructor(x, y, vx, vy, radius, color, life) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.radius = radius;
+                this.color = color;
+                this.life = life;
+                this.maxLife = life;
+            }
 
-    function resetSystem() {
-      bodies = [];
-      ships = [];
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+            }
 
-      // Central Star
-      bodies.push(new CelestialBody(cx, cy, 0, 0, 12000, 26, '#facc15', true));
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0, this.radius * (this.life / this.maxLife)), 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+        }
 
-      // Inner Planet
-      bodies.push(new CelestialBody(cx, cy - 140, 6.2, 0, 60, 6, '#38bdf8'));
+        // Spawn central Star
+        bodies.push(new Body(canvas.width / 2, canvas.height / 2, 0, 0, 2000, 25, '#ffcc00'));
 
-      // Outer Planet
-      bodies.push(new CelestialBody(cx, cy - 280, 4.3, 0, 180, 10, '#f87171'));
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 25; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                particles.push(new Particle(
+                    x, y, 
+                    Math.cos(angle) * speed, 
+                    Math.sin(angle) * speed, 
+                    Math.random() * 3 + 1, color, 40
+                ));
+            }
+        }
 
-      // Spawn Initial AI Probes
-      spawnAIShip();
-      spawnAIShip();
-    }
+        function applyGravity() {
+            for (let i = 0; i < bodies.length; i++) {
+                for (let j = i + 1; j < bodies.length; j++) {
+                    const b1 = bodies[i];
+                    const b2 = bodies[j];
+                    const dx = b2.x - b1.x;
+                    const dy = b2.y - b1.y;
+                    const distSq = dx * dx + dy * dy;
+                    const dist = Math.sqrt(distSq);
 
-    // Input Handling
-    canvas.addEventListener('mousedown', (e) => {
-      dragStart = { x: e.clientX, y: e.clientY };
-    });
+                    if (dist < b1.radius + b2.radius) {
+                        // Merge on collision
+                        createExplosion((b1.x + b2.x) / 2, (b1.y + b2.y) / 2, b1.mass > b2.mass ? b1.color : b2.color);
+                        const totalMass = b1.mass + b2.mass;
+                        b1.vx = (b1.vx * b1.mass + b2.vx * b2.mass) / totalMass;
+                        b1.vy = (b1.vy * b1.mass + b2.vy * b2.mass) / totalMass;
+                        b1.mass = totalMass;
+                        b1.radius = Math.min(50, Math.sqrt(b1.radius * b1.radius + b2.radius * b2.radius));
+                        bodies.splice(j, 1);
+                        j--;
+                        continue;
+                    }
 
-    canvas.addEventListener('mousemove', (e) => {
-      if (dragStart) dragCurrent = { x: e.clientX, y: e.clientY };
-    });
+                    const force = (G * b1.mass * b2.mass) / distSq;
+                    const fx = (force * dx) / dist;
+                    const fy = (force * dy) / dist;
 
-    canvas.addEventListener('mouseup', (e) => {
-      if (dragStart) {
-        let vx = (dragStart.x - e.clientX) * 0.04;
-        let vy = (dragStart.y - e.clientY) * 0.04;
-        let colors = ['#4ade80', '#a78bfa', '#fb923c', '#f472b6'];
-        let color = colors[Math.floor(Math.random() * colors.length)];
-        
-        bodies.push(new CelestialBody(dragStart.x, dragStart.y, vx, vy, 100, 8, color));
-        dragStart = null;
-        dragCurrent = null;
-      }
-    });
+                    b1.vx += fx / b1.mass;
+                    b1.vy += fy / b1.mass;
+                    b2.vx -= fx / b2.mass;
+                    b2.vy -= fy / b2.mass;
+                }
+            }
+        }
 
-    // Game Loop
-    function animate() {
-      ctx.fillStyle = 'rgba(5, 5, 13, 0.35)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        window.addEventListener('mousedown', (e) => {
+            if (e.button === 0) dragStart = { x: e.clientX, y: e.clientY };
+        });
 
-      computeGravity();
-      handleCollisions();
+        window.addEventListener('mousemove', (e) => {
+            mousePos = { x: e.clientX, y: e.clientY };
+        });
 
-      bodies.forEach(b => {
-        b.update();
-        b.draw();
-      });
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 0 && dragStart) {
+                const vx = (dragStart.x - e.clientX) * 0.05;
+                const vy = (dragStart.y - e.clientY) * 0.05;
+                bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, 10, 6, '#4da6ff'));
+                dragStart = null;
+            }
+        });
 
-      ships.forEach(s => {
-        s.update();
-        s.draw();
-      });
+        window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            bodies.push(new Body(e.clientX, e.clientY, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 5, 5, '#00ffff', true));
+        });
 
-      // Drag Velocity Vector Line
-      if (dragStart && dragCurrent) {
-        ctx.beginPath();
-        ctx.moveTo(dragStart.x, dragStart.y);
-        ctx.lineTo(dragCurrent.x, dragCurrent.y);
-        ctx.strokeStyle = '#ffffff';
-        ctx.setLineDash([4, 4]);
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
+        function gameLoop() {
+            ctx.fillStyle = 'rgba(5, 5, 13, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // UI Counter Update
-      document.getElementById('body-count').textContent = bodies.length;
-      document.getElementById('ai-count').textContent = ships.length;
+            applyGravity();
 
-      requestAnimationFrame(animate);
-    }
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
 
-    resetSystem();
-    animate();
-  </script>
+            bodies.forEach(b => { b.update(); b.draw(); });
+
+            if (dragStart) {
+                ctx.beginPath();
+                ctx.moveTo(dragStart.x, dragStart.y);
+                ctx.lineTo(mousePos.x, mousePos.y);
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
 </body>
 </html>
