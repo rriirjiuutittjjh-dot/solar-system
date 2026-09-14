@@ -1,42 +1,283 @@
-class SpaceAI {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.vx = 0;
-    this.vy = 0;
-    this.maxSpeed = 6;
-    this.state = "PATROL"; // PATROL, DOCK, or FLEE
-    this.target = null;
-  }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Solar System Sandbox</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #05050d; color: #fff; font-family: sans-serif; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 15px; left: 15px; pointer-events: none; text-shadow: 0 0 5px #000; }
+        #facts-panel {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 220px;
+            padding: 15px;
+            background: rgba(20, 20, 35, 0.6);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 0.85rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        #facts-panel h3 { margin: 0 0 10px 0; color: #ffcc00; font-size: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 5px; }
+        .fact-row { display: flex; justify-content: space-between; margin-bottom: 6px; color: #ccc; }
+        .fact-row span:last-child { color: #fff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h2>2D Space Sandbox</h2>
+        <p>Click & Drag to launch planets | Right Click to spawn AI probe</p>
+    </div>
 
-  // Steering behaviors to navigate toward target planet while compensating for gravity
-  update(planets) {
-    if (!this.target && planets.length > 0) {
-      // Pick nearest planet as target
-      this.target = planets[0];
-    }
+    <div id="facts-panel">
+        <h3>Quick Facts</h3>
+        <div class="fact-row"><span>Age:</span> <span>~4.568B years</span></div>
+        <div class="fact-row"><span>Star:</span> <span>1 Sun (G2V)</span></div>
+        <div class="fact-row"><span>Terrestrial:</span> <span>4 Planets</span></div>
+        <div class="fact-row"><span>Gas Giants:</span> <span>4 Planets</span></div>
+        <div class="fact-row"><span>Active Bodies:</span> <span id="body-count">1</span></div>
+    </div>
 
-    if (this.target) {
-      let dx = this.target.x - this.x;
-      let dy = this.target.y - this.y;
-      let dist = Math.hypot(dx, dy);
+    <canvas id="canvas"></canvas>
 
-      // Seek target planet
-      if (dist > this.target.radius + 20) {
-        let desiredVx = (dx / dist) * this.maxSpeed;
-        let desiredVy = (dy / dist) * this.maxSpeed;
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const bodyCountEl = document.getElementById('body-count');
 
-        // Apply smooth steering force
-        this.vx += (desiredVx - this.vx) * 0.05;
-        this.vy += (desiredVy - this.vy) * 0.05;
-      } else {
-        // Orbit or dock when close
-        this.state = "DOCK";
-      }
-    }
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-    // Apply movement
-    this.x += this.vx;
-    this.y += this.vy;
-  }
-}
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playLaunchSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function playProbeSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playExplosionSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        const G = 0.5;
+        const bodies = [];
+        const particles = [];
+        let dragStart = null;
+        let mousePos = { x: 0, y: 0 };
+
+        class Body {
+            constructor(x, y, vx, vy, mass, radius, color, isAI = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.mass = mass;
+                this.radius = radius;
+                this.color = color;
+                this.isAI = isAI;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.isAI && (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1)) {
+                    particles.push(new Particle(
+                        this.x - (this.vx * 2), 
+                        this.y - (this.vy * 2), 
+                        -this.vx * 0.2 + (Math.random() - 0.5), 
+                        -this.vy * 0.2 + (Math.random() - 0.5), 
+                        2, '#00ffff', 20
+                    ));
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = this.isAI ? 10 : 0;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        class Particle {
+            constructor(x, y, vx, vy, radius, color, life) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.radius = radius;
+                this.color = color;
+                this.life = life;
+                this.maxLife = life;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0, this.radius * (this.life / this.maxLife)), 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+        }
+
+        // Spawn central Star (Sun)
+        bodies.push(new Body(canvas.width / 2, canvas.height / 2, 0, 0, 2000, 25, '#ffcc00'));
+
+        function createExplosion(x, y, color) {
+            playExplosionSound();
+            for (let i = 0; i < 25; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                particles.push(new Particle(
+                    x, y, 
+                    Math.cos(angle) * speed, 
+                    Math.sin(angle) * speed, 
+                    Math.random() * 3 + 1, color, 40
+                ));
+            }
+        }
+
+        function applyGravity() {
+            for (let i = 0; i < bodies.length; i++) {
+                for (let j = i + 1; j < bodies.length; j++) {
+                    const b1 = bodies[i];
+                    const b2 = bodies[j];
+                    const dx = b2.x - b1.x;
+                    const dy = b2.y - b1.y;
+                    const distSq = dx * dx + dy * dy;
+                    const dist = Math.sqrt(distSq);
+
+                    if (dist < b1.radius + b2.radius) {
+                        createExplosion((b1.x + b2.x) / 2, (b1.y + b2.y) / 2, b1.mass > b2.mass ? b1.color : b2.color);
+                        const totalMass = b1.mass + b2.mass;
+                        b1.vx = (b1.vx * b1.mass + b2.vx * b2.mass) / totalMass;
+                        b1.vy = (b1.vy * b1.mass + b2.vy * b2.mass) / totalMass;
+                        b1.mass = totalMass;
+                        b1.radius = Math.min(50, Math.sqrt(b1.radius * b1.radius + b2.radius * b2.radius));
+                        bodies.splice(j, 1);
+                        j--;
+                        continue;
+                    }
+
+                    const force = (G * b1.mass * b2.mass) / distSq;
+                    const fx = (force * dx) / dist;
+                    const fy = (force * dy) / dist;
+
+                    b1.vx += fx / b1.mass;
+                    b1.vy += fy / b1.mass;
+                    b2.vx -= fx / b2.mass;
+                    b2.vy -= fy / b2.mass;
+                }
+            }
+        }
+
+        window.addEventListener('mousedown', (e) => {
+            initAudio();
+            if (e.button === 0) dragStart = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            mousePos = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 0 && dragStart) {
+                const vx = (dragStart.x - e.clientX) * 0.05;
+                const vy = (dragStart.y - e.clientY) * 0.05;
+                bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, 10, 6, '#4da6ff'));
+                playLaunchSound();
+                dragStart = null;
+            }
+        });
+
+        window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            initAudio();
+            bodies.push(new Body(e.clientX, e.clientY, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 5, 5, '#00ffff', true));
+            playProbeSound();
+        });
+
+        function gameLoop() {
+            ctx.fillStyle = 'rgba(5, 5, 13, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            applyGravity();
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            bodies.forEach(b => { b.update(); b.draw(); });
+
+            if (dragStart) {
+                ctx.beginPath();
+                ctx.moveTo(dragStart.x, dragStart.y);
+                ctx.lineTo(mousePos.x, mousePos.y);
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+            }
+
+            bodyCountEl.textContent = bodies.length;
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
